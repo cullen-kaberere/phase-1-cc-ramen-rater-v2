@@ -1,99 +1,164 @@
 // index.js
-
+const ramenMenu = document.getElementById("ramen-menu");
+const detailImage = document.querySelector(".detail-image");
+const detailName = document.querySelector(".name");
+const detailRestaurant = document.querySelector(".restaurant");
+const ratingDisplay = document.querySelector("#rating-display");
+const commentDisplay = document.querySelector("#comment-display");
 // Callbacks
-//  Handling click event on a ramen image and updating detail section   
-const handleClick = (ramen) => {
-  // Add code
-  
-  const ramenName = document.querySelector('#ramen-detail h2');
-  const ramenRestaurant = document.querySelector('#ramen-detail h3');
-  const ramenImage = document.querySelector('#ramen-detail img');
-  const ramenRating = document.querySelector('#rating-display');
-  const ramenComment = document.querySelector('#comment-display');
-  
-  // Update the details with the clicked ramen's information
-  ramenName.textContent = ramen.name;
-  ramenRestaurant.textContent = ramen.restaurant;
-  ramenImage.src = ramen.image;
-  ramenRating.textContent = ramen.rating;
-  ramenComment.textContent = ramen.comment;
+const handleClick = (event) => {
+  // Find the closest ramen card that was clicked
+  const ramen = event.target.closest(".ramen-card");
+
+  // If a ramen card was clicked, proceed with getting the details
+  if (ramen) {
+    const ramenImage = ramen.querySelector("img").src;
+    const ramenName = ramen.querySelector("h2").textContent;
+    const ramenRestaurant = ramen.querySelectorAll("h3")[0].textContent; // Ensure this gets the correct h3
+    const ramenRating = ramen.querySelector(".ramen-rating").textContent;
+    const ramenComment = ramen.querySelector(".ramen-comment").textContent;
+
+    // Populate the ramen-detail div with the selected ramen details
+    detailImage.src = ramenImage;
+    detailName.textContent = ramenName;
+    detailRestaurant.textContent = ramenRestaurant;
+    ratingDisplay.textContent = `${ramenRating} / 10`;
+    commentDisplay.textContent = ramenComment;
+
+    // Change the alt text of the detail image for accessibility
+    detailImage.alt = ramenName;
+  }
 };
 
-const addSubmitListener = () => {
+// Event delegation for ramen cards
+ramenMenu.addEventListener("click", handleClick);
+
+const addSubmitListener = (e) => {
   // Add code
-  const form = document.getElementById('new-ramen');
+  e.preventDefault();
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  let ramenObj = {
+    name: e.target.new_name.value,
+    restaurant: e.target.new_restaurant.value,
+    image: e.target.new_image.value,
+    rating: e.target.new_rating.value,
+    comment: e.target.new_comment.value,
+  };
 
-    // const newRamen = {
-  
-    const { 
-      'new-name': nameInput, 
-      'new-restaurant': restaurantInput, 
-      'new-image': imageInput, 
-      'new-rating': ratingInput, 
-      'new-comment': commentInput 
-    } = e.target;
-    
-    const newRamen = {
-      name: nameInput.value,
-      restaurant: restaurantInput.value,
-      image: imageInput.value,
-      rating: ratingInput.value,
-      comment: commentInput.value,
-    };
-    // Add the new ramen to the #ramen-menu div
-    addRamenToMenu(newRamen);
-
-    // Clear the form fields
-    form.reset();
-  });
+  renderRamens(ramenObj);
+  addRamen(ramenObj);
 };
+document
+  .querySelector("#new-ramen")
+  .addEventListener("submit", addSubmitListener);
+//Grabbing the new comment values
 
+const renderRamens = (ramen) => {
+  const card = document.createElement("div");
+  card.classList.add("ramen-card");
+  card.innerHTML = `
+      <img src="${ramen.image}" alt="${ramen.name}">
+      <h2 class="hidden">${ramen.name}</h2>
+      <h3 class="hidden">${ramen.restaurant}</h3>
+      <h3 class="hidden">Rating:</h3>
+      <p class="hidden">
+        <span class="ramen-rating">${ramen.rating}</span> / 10
+      </p>
+      <h3 class="hidden">Comment:</h3>
+      <p class="ramen-comment  hidden" >
+        ${ramen.comment}
+      </p>
+      <div id="remove-ramen-btn">
+      <button ><i class="fa-solid fa-trash"></i></button>
+      </div>
+
+  `;
+
+  card
+    .querySelector("#remove-ramen-btn")
+    .addEventListener("click", function (event) {
+      event.stopPropagation();
+      const ramenCard = event.target.closest(".ramen-card");
+      ramenCard.remove();
+      removeRamen(ramen.id);
+    });
+
+  //update Ramen
+  document
+    .querySelector("#edit-ramen")
+    .addEventListener("submit", function (event) {
+      event.preventDefault();
+      console.log("Submsission prevented on the second form");
+
+      const newRating = event.target["new-rating"].value;
+      const newComment = event.target["new-comment"].value;
+
+      console.log(newRating);
+      console.log(newComment);
+
+      ratingDisplay.textContent = newRating;
+      commentDisplay.textContent = newComment;
+    });
+
+  document.getElementById("ramen-menu").appendChild(card);
+};
 
 const displayRamens = () => {
   // Add code
-  fetch('http://localhost:3000/ramens')
+  fetch("http://localhost:3000/ramens", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
+  })
     .then((response) => response.json())
-    .then((ramens) => {
-      ramens.forEach((ramen) => {
-        addRamenToMenu(ramen);
-      });
-
-      // Automatically show the first ramen's details when the page loads
-      handleClick(ramens[0]);
-    });
+    .then((ramenData) => ramenData.forEach((ramen) => renderRamens(ramen)));
 };
-// Adds a ramen image to the #ramen-menu div
-const addRamenToMenu = (ramen) => {
-  const ramenMenu = document.getElementById('ramen-menu');
-  const img = document.createElement('img');
 
-  // Set the image's src attribute to the ramen's image URL
-  img.src = ramen.image;
+const addRamen = (ramenObj) => {
+  fetch("http://localhost:3000/ramens", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify(ramenObj),
+  })
+    .then((response) => response.json())
+    .then((ramen) => console.log(ramen));
+};
 
-  // Add click event listener to show ramen details when the image is clicked
-  img.addEventListener('click', () => handleClick(ramen));
-
-  // Append the image to the ramen-menu div
-  ramenMenu.appendChild(img);
+const updateRamen = (id, newRating, newComment) => {
+  fetch(`http://localhost:3000/ramens/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      rating: newRating,
+      comment: newComment,
+    }),
+  });
+};
+const removeRamen = (id) => {
+  fetch(`http://localhost:3000/ramens/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => response.json())
+    .then((ramen) => console.log(ramen));
 };
 
 const main = () => {
-  displayRamens(); // Invoke displayRamens here
-  addSubmitListener();// Invoke addSubmitListener here
-}
+  // Invoke displayRamens here
+  // Invoke addSubmitListener here
+  displayRamens();
+};
 
-main()
-// Call main() to start the app when the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', main);
-
+main();
 
 // Export functions for testing
-export {
-  displayRamens,
-  addSubmitListener,
-  handleClick,
-  main,
-};
+export { displayRamens, addSubmitListener, handleClick, main };
